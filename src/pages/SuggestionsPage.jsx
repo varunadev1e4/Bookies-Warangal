@@ -28,7 +28,7 @@ export default function SuggestionsPage() {
   useEffect(() => {
     async function fetchAll() {
       setLoading(true)
-      const [{ data: suggs }, { data: votes }] = await Promise.all([
+      const [{ data: suggs, error: suggErr }, { data: votes }] = await Promise.all([
         supabase.from('suggestions')
           .select('*, profiles(name, role)')
           .order(sort === 'votes' ? 'votes' : 'created_at', { ascending: false }),
@@ -36,6 +36,10 @@ export default function SuggestionsPage() {
           ? supabase.from('suggestion_votes').select('suggestion_id').eq('user_id', profile.id)
           : Promise.resolve({ data: [] }),
       ])
+      if (suggErr) {
+        console.error('Suggestions fetch error:', suggErr)
+        showError(`DB error: ${suggErr.message}`)
+      }
       setSuggestions(suggs || [])
       setMyVotes(new Set((votes || []).map(v => v.suggestion_id)))
       setLoading(false)

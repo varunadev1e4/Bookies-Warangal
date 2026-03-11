@@ -14,16 +14,21 @@ export default function SuggestModal({ open, onClose, onSuccess, prefillTitle = 
 
   async function submit() {
     if (!form.title.trim()) { showError('Book title is required'); return }
+    if (!profile?.id) { showError('You must be logged in'); return }
     setSaving(true)
-    const { error } = await supabase.from('suggestions').insert({
+    const { data, error } = await supabase.from('suggestions').insert({
       user_id: profile.id,
       title:   form.title.trim(),
       author:  form.author.trim() || null,
       genre:   form.genre,
       reason:  form.reason.trim() || null,
-    })
+    }).select().single()
     setSaving(false)
-    if (error) { showError(error.message); return }
+    if (error) {
+      console.error('Suggestion insert error:', error)
+      showError(`Could not save: ${error.message}`)
+      return
+    }
     success('Suggestion added! Others can vote on it 💡')
     setForm({ title:'', author:'', genre:'Fiction', reason:'' })
     ;(onSuccess || onClose)()
