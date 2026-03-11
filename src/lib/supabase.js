@@ -11,5 +11,6 @@ export const supabase = createClient(url, key, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
+    storage: window.sessionStorage,  // session dies when tab/window is closed
   }
 })
