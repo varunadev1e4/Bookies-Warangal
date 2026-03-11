@@ -21,7 +21,9 @@ export default function MembersPage() {
   const [query,    setQuery]    = useState('')
   const [loading,  setLoading]  = useState(true)
   const [selected, setSelected] = useState(null)   // member being viewed
-  const [history,  setHistory]  = useState([])
+  const [history,  setHistory]  = useState([])     // borrows
+  const [crHistory, setCrHistory] = useState([])   // challenge reads
+  const [histTab,   setHistTab]   = useState('all') // 'all'|'challenge'
   const [histLoad, setHistLoad] = useState(false)
   const [attended, setAttended] = useState(0)
 
@@ -52,18 +54,25 @@ export default function MembersPage() {
     setSelected(m)
     setHistLoad(true)
     setHistory([])
+    setCrHistory([])
+    setHistTab('all')
     setAttended(0)
-    const [{ data: borrows }, { count: attCount }] = await Promise.all([
+    const [{ data: borrows }, { data: cr }, { count: attCount }] = await Promise.all([
       supabase.from('borrows')
         .select('*, books(title, emoji, author, genre)')
         .eq('user_id', m.id)
         .order('borrowed_at', { ascending: false }),
+      supabase.from('challenge_reads')
+        .select('*, challenges(title)')
+        .eq('user_id', m.id)
+        .order('logged_at', { ascending: false }),
       supabase.from('meetup_attendance')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', m.id)
         .eq('attended', true),
     ])
     setHistory(borrows || [])
+    setCrHistory(cr || [])
     setAttended(attCount || 0)
     setHistLoad(false)
   }
@@ -194,36 +203,68 @@ export default function MembersPage() {
             </div>
 
             {/* Reading history */}
-            <h4 style={{ fontWeight: 700, fontSize: 14, marginBottom: 10 }}>📚 Reading History</h4>
+            {/* Reading history */}
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:8 }}>
+              <h4 style={{ fontWeight:700, fontSize:14 }}>📚 Reading History</h4>
+              <span style={{ fontSize:11, color:'var(--muted)' }}>{history.length + crHistory.length} total</span>
+            </div>
+            <div style={{ display:'flex', gap:6, marginBottom:10 }}>
+              {[
+                { key:'all',       label:`Library (${history.length})`         },
+                { key:'challenge', label:`📊 Challenges (${crHistory.length})` },
+              ].map(t => (
+                <button key={t.key} onClick={() => setHistTab(t.key)} style={{
+                  padding:'4px 10px', borderRadius:16, fontSize:11, fontWeight:700,
+                  border:'1.5px solid', cursor:'pointer',
+                  background:  histTab===t.key ? 'var(--amber)' : 'transparent',
+                  color:       histTab===t.key ? '#fff' : 'var(--muted)',
+                  borderColor: histTab===t.key ? 'var(--amber)' : 'var(--border)',
+                }}>{t.label}</button>
+              ))}
+            </div>
             {histLoad
               ? <div style={{ display:'flex', justifyContent:'center', padding:'20px 0' }}><div className="spinner"/></div>
-              : history.length === 0
-                ? <p style={{ fontSize: 13, color: 'var(--muted)', textAlign: 'center', padding: '16px 0' }}>No books borrowed yet.</p>
-                : <div style={{ maxHeight: 280, overflowY: 'auto' }}>
-                    {history.map(b => (
-                      <div key={b.id} style={{
-                        display: 'flex', alignItems: 'center', gap: 10,
-                        padding: '9px 0', borderBottom: '1px solid var(--border)',
-                      }}>
-                        <span style={{ fontSize: 22, flexShrink: 0 }}>{b.books?.emoji || '📖'}</span>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontWeight: 600, fontSize: 13, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-                            {b.books?.title}
+              : (histTab==='challenge' ? crHistory : history).length === 0
+                ? <p style={{ fontSize:13, color:'var(--muted)', textAlign:'center', padding:'16px 0' }}>
+                    {histTab==='challenge' ? 'No challenge books logged yet.' : 'No books borrowed yet.'}
+                  </p>
+                : <div style={{ maxHeight: 260, overflowY: 'auto' }}>
+                    {(histTab==='challenge' ? crHistory : history).map(b => {
+                      const isCR = histTab === 'challenge'
+                      return (
+                        <div key={b.id} style={{
+                          display:'flex', alignItems:'center', gap:10,
+                          padding:'9px 0', borderBottom:'1px solid var(--border)',
+                        }}>
+                          <span style={{ fontSize:22, flexShrink:0 }}>{isCR ? '📊' : (b.books?.emoji||'📖')}</span>
+                          <div style={{ flex:1, minWidth:0 }}>
+                            <div style={{ fontWeight:600, fontSize:13, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                              {isCR ? b.title : b.books?.title}
+                            </div>
+                            <div style={{ fontSize:11, color:'var(--muted)' }}>
+                              {isCR
+                                ? <>{b.author && `by ${b.author} · `}{'⭐'.repeat(b.rating||0)}</>
+                                : `by ${b.books?.author} · ${b.books?.genre}`
+                              }
+                            </div>
+                            <div style={{ fontSize:10, color:'var(--muted)', marginTop:2 }}>
+                              {isCR
+                                ? `Logged ${new Date(b.logged_at).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}`
+                                : <>Borrowed {new Date(b.borrowed_at).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}
+                                    {b.returned_at && ` → Returned ${new Date(b.returned_at).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}`}
+                                  </>
+                              }
+                            </div>
                           </div>
-                          <div style={{ fontSize: 11, color: 'var(--muted)' }}>
-                            by {b.books?.author} · {b.books?.genre}
-                          </div>
-                          <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 2 }}>
-                            Borrowed {new Date(b.borrowed_at).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' })}
-                            {b.returned_at && ` → Returned ${new Date(b.returned_at).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' })}`}
-                          </div>
+                          {isCR
+                            ? <span style={{ fontSize:10, flexShrink:0, background:'#e8eaf6', color:'#3949ab', padding:'2px 7px', borderRadius:8, border:'1px solid #9fa8da' }}>challenge</span>
+                            : <span className={`tag ${b.status==='returned'?'tag-green':b.status==='overdue'?'tag-red':'tag-amber'}`} style={{ fontSize:10, flexShrink:0 }}>
+                                {b.status}
+                              </span>
+                          }
                         </div>
-                        <span className={`tag ${b.status==='returned' ? 'tag-green' : b.status==='overdue' ? 'tag-red' : 'tag-amber'}`}
-                          style={{ fontSize: 10, flexShrink: 0 }}>
-                          {b.status}
-                        </span>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
             }
 

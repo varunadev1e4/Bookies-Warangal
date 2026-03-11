@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
+import Modal from '../components/Modal'
 
 function StatCard({ num, label }) {
   return (
@@ -86,6 +87,11 @@ export default function HomePage() {
   const [activity, setActivity]       = useState([])
   const [loading, setLoading]         = useState(true)
 
+  // Book log dialog
+  const [logModal, setLogModal]       = useState(null)   // challenge being logged against
+  const [logForm,  setLogForm]        = useState({ title:'', author:'', rating:4 })
+  const [logSaving, setLogSaving]     = useState(false)
+
   useEffect(() => {
     fetchAll()
   }, [profile?.id])
@@ -160,55 +166,76 @@ export default function HomePage() {
     setActivity(data || [])
   }
 
-  async function updateProgress(challenge, delta) {
-    if (!profile?.id) return
+  // Opens the dialog — actual save happens in saveBookLog
+  function openLogModal(challenge) {
+    setLogForm({ title: '', author: '', rating: 4 })
+    setLogModal(challenge)
+  }
+
+  async function saveBookLog() {
+    if (!logForm.title.trim()) { showError('Book title is required'); return }
+    const challenge = logModal
+    setLogSaving(true)
 
     const current = myProgress[challenge.id] || 0
-    const newVal  = Math.max(0, Math.min(challenge.target, current + delta))
-    if (newVal === current) return   // already at limit
+    const newVal  = Math.min(challenge.target, current + 1)
 
-    // Upsert progress row
+    // 1. Save to challenge_reads so it appears in reading history
+    await supabase.from('challenge_reads').insert({
+      user_id:      profile.id,
+      challenge_id: challenge.id,
+      title:        logForm.title.trim(),
+      author:       logForm.author.trim() || null,
+      rating:       logForm.rating,
+    })
+
+    // 2. Upsert challenge progress
     const { error } = await supabase
       .from('challenge_progress')
       .upsert(
         { challenge_id: challenge.id, user_id: profile.id, books_completed: newVal },
         { onConflict: 'challenge_id,user_id' }
       )
-    if (error) { showError('Could not update progress'); return }
+    if (error) { showError('Could not update progress'); setLogSaving(false); return }
 
-    // Optimistically update local state so bar animates instantly
+    // 3. Optimistically update bar
     setMyProgress(prev => ({ ...prev, [challenge.id]: newVal }))
 
-    if (delta > 0) {
-      // Fetch FRESH points from DB — never use profile.points (it's a stale closure)
-      const { data: freshData } = await supabase
-        .from('profiles')
-        .select('points')
-        .eq('id', profile.id)
-        .single()
-      const freshPoints = freshData?.points || 0
+    // 4. Award points (fresh fetch to avoid stale closure)
+    const { data: freshData } = await supabase
+      .from('profiles').select('points').eq('id', profile.id).single()
+    const bonusPoints = newVal === challenge.target ? 5 + challenge.points_reward : 5
+    await supabase.from('profiles')
+      .update({ points: (freshData?.points || 0) + bonusPoints })
+      .eq('id', profile.id)
 
-      const bonusPoints = newVal === challenge.target ? 5 + challenge.points_reward : 5
+    // 5. Activity feed
+    await supabase.from('activity_feed').insert({
+      user_id: profile.id,
+      action:  'logged a book for',
+      target:  challenge.title,
+    })
 
-      await supabase
-        .from('profiles')
-        .update({ points: freshPoints + bonusPoints })
-        .eq('id', profile.id)
+    setLogSaving(false)
+    setLogModal(null)
 
-      // Log to activity feed
-      await supabase.from('activity_feed').insert({
-        user_id: profile.id,
-        action: 'logged progress on',
-        target: challenge.title,
-      })
-
-      if (newVal === challenge.target) {
-        success(`🏆 Challenge complete! +${challenge.points_reward} bonus points!`)
-      } else {
-        success(`+1 book logged! +5 pts · ${newVal}/${challenge.target} done 📚`)
-      }
-      refreshProfile()
+    if (newVal === challenge.target) {
+      success(`🏆 Challenge complete! "${logForm.title}" logged · +${bonusPoints} pts!`)
+    } else {
+      success(`"${logForm.title}" logged! +5 pts · ${newVal}/${challenge.target} done 📚`)
     }
+    refreshProfile()
+  }
+
+  async function undoProgress(challenge) {
+    const current = myProgress[challenge.id] || 0
+    if (current <= 0) return
+    const newVal = current - 1
+    await supabase.from('challenge_progress').upsert(
+      { challenge_id: challenge.id, user_id: profile.id, books_completed: newVal },
+      { onConflict: 'challenge_id,user_id' }
+    )
+    setMyProgress(prev => ({ ...prev, [challenge.id]: newVal }))
   }
 
   const firstName = profile?.name?.split(' ')[0] || 'Reader'
@@ -382,14 +409,14 @@ export default function HomePage() {
                 {!isPast && !done && (
                   <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                     {completed > 0 && (
-                      <button onClick={() => updateProgress(c, -1)} title="Undo" style={{
+                      <button onClick={() => undoProgress(c)} title="Undo last entry" style={{
                         width: 30, height: 30, borderRadius: 8,
                         border: '1.5px solid var(--border)', background: 'transparent',
                         cursor: 'pointer', fontSize: 15, color: 'var(--muted)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                       }}>−</button>
                     )}
-                    <button onClick={() => updateProgress(c, 1)} style={{
+                    <button onClick={() => openLogModal(c)} style={{
                       padding: '6px 14px', borderRadius: 8, background: 'var(--amber)',
                       color: '#fff', border: 'none', cursor: 'pointer',
                       fontSize: 12, fontWeight: 700, fontFamily: 'var(--font-sans)',
@@ -450,6 +477,62 @@ export default function HomePage() {
             )
         }
       </div>
+
+      {/* ── Log Book Modal ── */}
+      <Modal open={!!logModal} onClose={() => setLogModal(null)} title="📖 Log a Book">
+        {logModal && (
+          <>
+            <div style={{
+              background: 'var(--cream)', borderRadius: 10, padding: '10px 14px',
+              fontSize: 12, color: 'var(--muted)', marginBottom: 16,
+            }}>
+              Challenge: <strong style={{ color: 'var(--ink)' }}>{logModal.title}</strong>
+              <span style={{ marginLeft: 8 }}>· {myProgress[logModal.id] || 0}/{logModal.target} done</span>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Book Title *</label>
+              <input className="input" placeholder="e.g. The God of Small Things"
+                value={logForm.title}
+                onChange={e => setLogForm(f => ({ ...f, title: e.target.value }))}
+                autoFocus />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Author</label>
+              <input className="input" placeholder="e.g. Arundhati Roy"
+                value={logForm.author}
+                onChange={e => setLogForm(f => ({ ...f, author: e.target.value }))} />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Your Rating</label>
+              <div style={{ display: 'flex', gap: 6, marginTop: 4, alignItems: 'center' }}>
+                {[1,2,3,4,5].map(n => (
+                  <button key={n} type="button"
+                    onClick={() => setLogForm(f => ({ ...f, rating: n }))}
+                    style={{
+                      width: 42, height: 42, borderRadius: 10, fontSize: 20,
+                      border: `2px solid ${logForm.rating >= n ? 'var(--amber)' : 'var(--border)'}`,
+                      background: logForm.rating >= n ? '#fff8ee' : 'transparent',
+                      cursor: 'pointer', transition: 'all 0.15s',
+                    }}>⭐</button>
+                ))}
+                <span style={{ fontSize: 13, color: 'var(--muted)', marginLeft: 4 }}>
+                  {['','Awful','Poor','Okay','Good','Amazing'][logForm.rating]}
+                </span>
+              </div>
+            </div>
+
+            <div className="form-actions">
+              <button className="btn btn-primary btn-lg" onClick={saveBookLog} disabled={logSaving}>
+                {logSaving ? <><span className="spinner spinner-sm" /> Saving…</> : '✅ Log Book (+5 pts)'}
+              </button>
+              <button className="btn btn-outline" onClick={() => setLogModal(null)}>Cancel</button>
+            </div>
+          </>
+        )}
+      </Modal>
     </div>
   )
 }

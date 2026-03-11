@@ -36,8 +36,9 @@ export default function ProfilePage() {
   const { success, error: showError } = useToast()
   const navigate = useNavigate()
 
-  const [borrows,   setBorrows]   = useState([])
-  const [reviews,   setReviews]   = useState([])
+  const [borrows,       setBorrows]       = useState([])
+  const [challengeReads, setChallengeReads] = useState([])
+  const [reviews,       setReviews]       = useState([])
   const [attended,  setAttended]  = useState(0)
   const [loading,   setLoading]   = useState(true)
   const [histTab,   setHistTab]   = useState('all')   // 'all' | 'active' | 'returned'
@@ -58,6 +59,7 @@ export default function ProfilePage() {
     setLoading(true)
     const [
       { data: borrowData },
+      { data: crData },
       { data: reviewData },
       { count: attCount },
     ] = await Promise.all([
@@ -65,6 +67,10 @@ export default function ProfilePage() {
         .select('*, books(title,emoji,author,genre)')
         .eq('user_id', profile.id)
         .order('borrowed_at', { ascending: false }),
+      supabase.from('challenge_reads')
+        .select('*, challenges(title)')
+        .eq('user_id', profile.id)
+        .order('logged_at', { ascending: false }),
       supabase.from('reviews')
         .select('*, books(title,emoji)')
         .eq('user_id', profile.id)
@@ -75,6 +81,7 @@ export default function ProfilePage() {
         .eq('attended', true),
     ])
     setBorrows(borrowData || [])
+    setChallengeReads(crData || [])
     setReviews(reviewData || [])
     setAttended(attCount || 0)
     setLoading(false)
@@ -121,10 +128,11 @@ export default function ProfilePage() {
   const returnedBorrows = borrows.filter(b => b.status === 'returned')
   const overdueBorrows  = borrows.filter(b => b.status === 'overdue')
 
-  const histFiltered = histTab === 'active'   ? activeBorrows
-                     : histTab === 'returned' ? returnedBorrows
-                     : histTab === 'overdue'  ? overdueBorrows
-                     : borrows
+  const histFiltered = histTab === 'active'    ? activeBorrows
+                     : histTab === 'returned'  ? returnedBorrows
+                     : histTab === 'overdue'   ? overdueBorrows
+                     : histTab === 'challenge' ? challengeReads
+                     : borrows   // 'all' shows only borrowed books
 
   return (
     <div className="page-wrapper fade-in">
@@ -211,16 +219,17 @@ export default function ProfilePage() {
       <div className="card" style={{ marginBottom:14 }}>
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:12 }}>
           <h3 style={{ fontWeight:700, fontSize:15 }}>📚 Reading History</h3>
-          <span style={{ fontSize:12, color:'var(--muted)' }}>{borrows.length} total</span>
+          <span style={{ fontSize:12, color:'var(--muted)' }}>{borrows.length + challengeReads.length} total</span>
         </div>
 
         {/* History filter tabs */}
         <div style={{ display:'flex', gap:6, marginBottom:14, flexWrap:'wrap' }}>
           {[
-            { key:'all',      label:`All (${borrows.length})`           },
-            { key:'active',   label:`📖 Active (${activeBorrows.length})`   },
-            { key:'returned', label:`✅ Returned (${returnedBorrows.length})` },
-            { key:'overdue',  label:`⏰ Overdue (${overdueBorrows.length})`  },
+            { key:'all',       label:`Library (${borrows.length})`              },
+            { key:'challenge', label:`📊 Challenges (${challengeReads.length})` },
+            { key:'active',    label:`📖 Active (${activeBorrows.length})`      },
+            { key:'returned',  label:`✅ Done (${returnedBorrows.length})`       },
+            { key:'overdue',   label:`⏰ Overdue (${overdueBorrows.length})`     },
           ].map(t => (
             <button key={t.key} onClick={() => setHistTab(t.key)} style={{
               padding:'5px 11px', borderRadius:20, fontSize:11, fontWeight:700,
@@ -236,9 +245,11 @@ export default function ProfilePage() {
           ? <div className="spinner" style={{ margin:'16px auto', display:'block' }} />
           : histFiltered.length === 0
             ? <p style={{ fontSize:13, color:'var(--muted)', padding:'10px 0' }}>
-                {histTab==='all' ? 'No borrow history yet.' : `No ${histTab} books.`}
+                {histTab==='challenge' ? 'No challenge books logged yet.' : histTab==='all' ? 'No borrow history yet.' : `No ${histTab} books.`}
               </p>
-            : histFiltered.map(b => (
+            : histFiltered.map(b => {
+                const isCR = !!b.logged_at   // challenge_read has logged_at, borrow has borrowed_at
+                return (
                 <div key={b.id} style={{
                   display:'flex', alignItems:'flex-start', gap:12,
                   padding:'12px 0', borderBottom:'1px solid var(--border)',
@@ -246,45 +257,55 @@ export default function ProfilePage() {
                   {/* Book spine */}
                   <div style={{
                     width:42, height:56, borderRadius:6, flexShrink:0,
-                    background: b.status==='returned'
-                      ? 'linear-gradient(135deg,#2a5a2a,#3d8c3d)'
-                      : b.status==='overdue'
-                        ? 'linear-gradient(135deg,#7a1a0a,#c0392b)'
-                        : 'linear-gradient(135deg,#2d1200,#8b3a00)',
-                    display:'flex', alignItems:'center', justifyContent:'center',
-                    fontSize:22,
-                  }}>{b.books?.emoji || '📖'}</div>
+                    background: isCR
+                      ? 'linear-gradient(135deg,#1a2a6c,#2d4fa0)'
+                      : b.status==='returned'
+                        ? 'linear-gradient(135deg,#2a5a2a,#3d8c3d)'
+                        : b.status==='overdue'
+                          ? 'linear-gradient(135deg,#7a1a0a,#c0392b)'
+                          : 'linear-gradient(135deg,#2d1200,#8b3a00)',
+                    display:'flex', alignItems:'center', justifyContent:'center', fontSize:22,
+                  }}>{isCR ? '📊' : (b.books?.emoji || '📖')}</div>
 
                   {/* Details */}
                   <div style={{ flex:1, minWidth:0 }}>
-                    <div style={{ fontWeight:700, fontSize:13, marginBottom:2 }}>{b.books?.title}</div>
-                    <div style={{ fontSize:11, color:'var(--muted)', marginBottom:4 }}>
-                      by {b.books?.author} · {b.books?.genre}
+                    <div style={{ fontWeight:700, fontSize:13, marginBottom:2 }}>
+                      {isCR ? b.title : b.books?.title}
                     </div>
-                    {/* Date row */}
+                    <div style={{ fontSize:11, color:'var(--muted)', marginBottom:4 }}>
+                      {isCR
+                        ? <>{b.author && `by ${b.author} · `}{'⭐'.repeat(b.rating)} · <em>{b.challenges?.title || 'Challenge'}</em></>
+                        : `by ${b.books?.author} · ${b.books?.genre}`
+                      }
+                    </div>
                     <div style={{ fontSize:11, color:'var(--muted)', lineHeight:1.7 }}>
-                      <span>📅 Borrowed: <strong>{new Date(b.borrowed_at).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}</strong></span>
-                      {b.returned_at
-                        ? <><br/><span>↩️ Returned: <strong>{new Date(b.returned_at).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}</strong></span>
-                          {duration(b.borrowed_at, b.returned_at) && (
-                            <span style={{ marginLeft:8, background:'var(--cream)', padding:'1px 7px', borderRadius:10 }}>
-                              ⏱ {duration(b.borrowed_at, b.returned_at)}
-                            </span>
-                          )}</>
-                        : <><br/><span style={{ color: b.status==='overdue' ? '#c0392b' : 'inherit' }}>
-                            📌 Due: <strong>{new Date(b.due_date).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}</strong>
-                          </span></>
+                      {isCR
+                        ? <span>📅 Logged: <strong>{new Date(b.logged_at).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}</strong></span>
+                        : <>
+                            <span>📅 Borrowed: <strong>{new Date(b.borrowed_at).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}</strong></span>
+                            {b.returned_at
+                              ? <><br/><span>↩️ Returned: <strong>{new Date(b.returned_at).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}</strong></span>
+                                  {duration(b.borrowed_at, b.returned_at) && (
+                                    <span style={{ marginLeft:8, background:'var(--cream)', padding:'1px 7px', borderRadius:10 }}>⏱ {duration(b.borrowed_at, b.returned_at)}</span>
+                                  )}</>
+                              : <><br/><span style={{ color: b.status==='overdue' ? '#c0392b' : 'inherit' }}>📌 Due: <strong>{new Date(b.due_date).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}</strong></span></>
+                            }
+                          </>
                       }
                     </div>
                   </div>
 
                   {/* Status badge */}
-                  <span className={`tag ${b.status==='returned'?'tag-green':b.status==='overdue'?'tag-red':'tag-amber'}`}
-                    style={{ fontSize:10, flexShrink:0, marginTop:2, textTransform:'capitalize' }}>
-                    {b.status}
-                  </span>
+                  {isCR
+                    ? <span className="tag" style={{ fontSize:10, flexShrink:0, marginTop:2, background:'#e8eaf6', color:'#3949ab', border:'1px solid #9fa8da' }}>challenge</span>
+                    : <span className={`tag ${b.status==='returned'?'tag-green':b.status==='overdue'?'tag-red':'tag-amber'}`}
+                        style={{ fontSize:10, flexShrink:0, marginTop:2, textTransform:'capitalize' }}>
+                        {b.status}
+                      </span>
+                  }
                 </div>
-              ))
+                )
+              })
         }
       </div>
 
