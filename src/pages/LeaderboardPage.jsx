@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
@@ -59,27 +59,46 @@ export default function LeaderboardPage() {
   const [loading, setLoading] = useState(true)
   const [fetchError, setFetchError] = useState(null)
 
+  // Keep tab/limit in a ref so the realtime callback always sees latest values
+  const tabRef   = React.useRef(tab)
+  const limitRef = React.useRef(limit)
+  useEffect(() => { tabRef.current = tab },   [tab])
+  useEffect(() => { limitRef.current = limit }, [limit])
+
   useEffect(() => {
-    async function fetchMembers() {
-      setLoading(true)
-      setFetchError(null)
-      const orderCol = tab === 'books' ? 'books_read' : 'points'
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, name, points, books_read, role, joined_at')
-        .order(orderCol, { ascending: false })
-        .limit(limit)
-      if (error) {
-        console.error('Leaderboard fetch error:', error)
-        setFetchError(error.message)
-        setMembers([])
-      } else {
-        setMembers(data || [])
-      }
-      setLoading(false)
-    }
     fetchMembers()
+
+    // Realtime: re-fetch whenever any profile row changes (points/books_read update)
+    const channel = supabase
+      .channel('leaderboard-live')
+      .on('postgres_changes', {
+        event:  'UPDATE',
+        schema: 'public',
+        table:  'profiles',
+      }, () => fetchMembers())
+      .subscribe()
+
+    return () => supabase.removeChannel(channel)
   }, [tab, limit, location.key])
+
+  async function fetchMembers() {
+    setLoading(true)
+    setFetchError(null)
+    const orderCol = tabRef.current === 'books' ? 'books_read' : 'points'
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, name, points, books_read, role, joined_at')
+      .order(orderCol, { ascending: false })
+      .limit(limitRef.current)
+    if (error) {
+      console.error('Leaderboard fetch error:', error)
+      setFetchError(error.message)
+      setMembers([])
+    } else {
+      setMembers(data || [])
+    }
+    setLoading(false)
+  }
 
   const top3 = members.slice(0, Math.min(3, members.length))
   const rest  = members.slice(3)
