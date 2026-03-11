@@ -30,7 +30,7 @@ export default function SuggestionsPage() {
       setLoading(true)
       const [{ data: suggs, error: suggErr }, { data: votes }] = await Promise.all([
         supabase.from('suggestions')
-          .select('*, profiles(name, role)')
+          .select('*, author_profile:profiles!suggestions_user_id_fkey(name, role)')
           .order(sort === 'votes' ? 'votes' : 'created_at', { ascending: false }),
         profile?.id
           ? supabase.from('suggestion_votes').select('suggestion_id').eq('user_id', profile.id)
@@ -163,8 +163,8 @@ export default function SuggestionsPage() {
 
                     <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
                       <div style={{ fontSize:11, color:'var(--muted)' }}>
-                        {s.profiles?.role === 'admin' ? '⚡ ' : ''}
-                        <strong>{s.profiles?.name || 'Member'}</strong> · {timeAgo(s.created_at)}
+                        {s.author_profile?.role === 'admin' ? '⚡ ' : ''}
+                        <strong>{s.author_profile?.name || 'Member'}</strong> · {timeAgo(s.created_at)}
                       </div>
                       {(isOwner || isAdmin) && (
                         <button onClick={() => deleteSuggestion(s.id)} style={{
