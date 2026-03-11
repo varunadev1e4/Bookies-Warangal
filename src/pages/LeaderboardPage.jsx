@@ -80,7 +80,7 @@ export default function LeaderboardPage() {
     fetchMembers()
   }, [tab, location.key])
 
-  const top3 = members.slice(0, 3)
+  const top3 = members.slice(0, Math.min(3, members.length))
   const rest  = members.slice(3)
 
   return (
@@ -104,15 +104,23 @@ export default function LeaderboardPage() {
           ? <div className="empty-state"><div className="es-icon">🏆</div><p>No members yet.</p></div>
           : (
             <>
-              {/* Podium */}
-              {top3.length >= 3 && (
+              {/* Podium — works with 1, 2 or 3 members */}
+              {top3.length > 0 && (
                 <div style={{
-                  display: 'grid', gridTemplateColumns: '1fr 1.2fr 1fr',
+                  display: 'grid',
+                  gridTemplateColumns: top3.length === 1 ? '1fr' : top3.length === 2 ? '1fr 1fr' : '1fr 1.2fr 1fr',
                   gap: 8, marginBottom: 20, alignItems: 'flex-end',
                 }}>
-                  <PodiumCard member={top3[1]} rank={2} />
-                  <PodiumCard member={top3[0]} rank={1} style={{ paddingTop: 24 }} />
-                  <PodiumCard member={top3[2]} rank={3} />
+                  {top3.length === 1 && <PodiumCard member={top3[0]} rank={1} />}
+                  {top3.length === 2 && <>
+                    <PodiumCard member={top3[0]} rank={1} style={{ paddingTop: 24 }} />
+                    <PodiumCard member={top3[1]} rank={2} />
+                  </>}
+                  {top3.length >= 3 && <>
+                    <PodiumCard member={top3[1]} rank={2} />
+                    <PodiumCard member={top3[0]} rank={1} style={{ paddingTop: 24 }} />
+                    <PodiumCard member={top3[2]} rank={3} />
+                  </>}
                 </div>
               )}
 
