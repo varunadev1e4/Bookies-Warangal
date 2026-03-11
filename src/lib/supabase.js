@@ -9,8 +9,9 @@ if (!url || !key) {
 
 export const supabase = createClient(url, key, {
   auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    // localStorage keeps session alive across tabs and browser restarts
+    persistSession:     true,
+    autoRefreshToken:   true,
+    storage:            window.localStorage,
+    detectSessionInUrl: false,
   }
 })
