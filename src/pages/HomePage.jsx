@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
+import { useToast } from '../contexts/ToastContext'
 
 function StatCard({ num, label }) {
   return (
@@ -47,7 +48,8 @@ function ActivityItem({ item }) {
 }
 
 export default function HomePage() {
-  const { profile } = useAuth()
+  const { profile, refreshProfile } = useAuth()
+  const { success, error: showError } = useToast()
   const navigate = useNavigate()
 
   const [stats, setStats]             = useState({ members: 0, books: 0, meetups: 0 })
@@ -130,6 +132,54 @@ export default function HomePage() {
       .order('created_at', { ascending: false })
       .limit(8)
     setActivity(data || [])
+  }
+
+  async function updateProgress(challenge, delta) {
+    if (!profile?.id) return
+
+    const current = myProgress[challenge.id] || 0
+    const newVal  = Math.max(0, Math.min(challenge.target, current + delta))
+    if (newVal === current) return   // already at limit
+
+    // Upsert progress row
+    const { error } = await supabase
+      .from('challenge_progress')
+      .upsert(
+        { challenge_id: challenge.id, user_id: profile.id, books_completed: newVal },
+        { onConflict: 'challenge_id,user_id' }
+      )
+    if (error) { showError('Could not update progress'); return }
+
+    // Optimistically update local state so bar animates instantly
+    setMyProgress(prev => ({ ...prev, [challenge.id]: newVal }))
+
+    if (delta > 0) {
+      // Award points for each book logged
+      await supabase
+        .from('profiles')
+        .update({ points: (profile.points || 0) + 5 })
+        .eq('id', profile.id)
+
+      // Log to activity feed
+      await supabase.from('activity_feed').insert({
+        user_id: profile.id,
+        action: 'logged progress on',
+        target: challenge.title,
+      })
+
+      // Check if challenge just completed
+      if (newVal === challenge.target) {
+        // Award the full bonus points
+        await supabase
+          .from('profiles')
+          .update({ points: (profile.points || 0) + 5 + challenge.points_reward })
+          .eq('id', profile.id)
+        success(`🏆 Challenge complete! +${challenge.points_reward} bonus points!`)
+      } else {
+        success(`+1 book logged! +5 pts · ${newVal}/${challenge.target} done 📚`)
+      }
+      refreshProfile()
+    }
   }
 
   const firstName = profile?.name?.split(' ')[0] || 'Reader'
@@ -248,20 +298,102 @@ export default function HomePage() {
           </div>
           {challenges.map(c => {
             const completed = myProgress[c.id] || 0
-            const pct = Math.min(100, Math.round((completed / c.target) * 100))
+            const pct       = Math.min(100, Math.round((completed / c.target) * 100))
+            const done      = completed >= c.target
+            const expired   = c.end_date && new Date(c.end_date) < new Date()
+
             return (
-              <div key={c.id} className="card" style={{ padding: '14px 16px', marginBottom: 10 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                  <span style={{ fontWeight: 600, fontSize: 14 }}>{c.title}</span>
-                  <span style={{ fontFamily: 'var(--font-serif)', fontWeight: 700, fontSize: 18, color: 'var(--amber)' }}>{pct}%</span>
+              <div key={c.id} className="card" style={{ padding: '16px', marginBottom: 10 }}>
+                {/* Title row */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+                  <div style={{ flex: 1, paddingRight: 12 }}>
+                    <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 2 }}>
+                      {c.title}
+                      {done && <span style={{ marginLeft: 8, fontSize: 13 }}>🏆</span>}
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--muted)' }}>
+                      {c.end_date && `Ends ${new Date(c.end_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} · `}
+                      +{c.points_reward} pts on completion
+                    </div>
+                  </div>
+                  <span style={{
+                    fontFamily: 'var(--font-serif)', fontWeight: 700, fontSize: 20,
+                    color: done ? 'var(--sage)' : 'var(--amber)', flexShrink: 0,
+                  }}>{pct}%</span>
                 </div>
-                <div style={{ height: 8, background: 'var(--cream)', borderRadius: 10 }}>
-                  <div style={{ height: '100%', borderRadius: 10, background: 'linear-gradient(90deg, var(--amber), var(--amber-light))', width: `${pct}%`, transition: 'width 0.6s' }} />
+
+                {/* Progress bar */}
+                <div style={{ height: 10, background: 'var(--cream)', borderRadius: 10, marginBottom: 10, overflow: 'hidden' }}>
+                  <div style={{
+                    height: '100%', borderRadius: 10,
+                    background: done
+                      ? 'linear-gradient(90deg, #3d6b34, #5a9e4a)'
+                      : 'linear-gradient(90deg, var(--amber), var(--amber-light))',
+                    width: `${pct}%`,
+                    transition: 'width 0.5s ease',
+                  }} />
                 </div>
-                <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 6 }}>
-                  {completed} of {c.target} books
-                  {c.end_date && ` · Ends ${new Date(c.end_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}`}
-                  {` · +${c.points_reward} pts reward`}
+
+                {/* Books count + buttons */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: 13, color: 'var(--muted)' }}>
+                    <strong style={{ color: 'var(--ink)', fontFamily: 'var(--font-serif)', fontSize: 16 }}>{completed}</strong>
+                    <span style={{ fontSize: 12 }}> / {c.target} books</span>
+                    {done && <span style={{ color: 'var(--sage)', fontWeight: 700, marginLeft: 8 }}>Complete!</span>}
+                  </span>
+
+                  {!expired && (
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                      {/* Undo button — only show if progress > 0 */}
+                      {completed > 0 && !done && (
+                        <button
+                          onClick={() => updateProgress(c, -1)}
+                          style={{
+                            width: 30, height: 30, borderRadius: 8,
+                            border: '1.5px solid var(--border)',
+                            background: 'transparent', cursor: 'pointer',
+                            fontSize: 15, color: 'var(--muted)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            transition: 'all 0.18s',
+                          }}
+                          title="Undo last book"
+                          onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--amber)'}
+                          onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
+                        >−</button>
+                      )}
+
+                      {/* Main +1 button */}
+                      {!done ? (
+                        <button
+                          onClick={() => updateProgress(c, 1)}
+                          style={{
+                            padding: '6px 14px', borderRadius: 8,
+                            background: 'var(--amber)', color: '#fff',
+                            border: 'none', cursor: 'pointer',
+                            fontSize: 12, fontWeight: 700,
+                            fontFamily: 'var(--font-sans)',
+                            display: 'flex', alignItems: 'center', gap: 5,
+                            transition: 'all 0.18s',
+                          }}
+                          onMouseEnter={e => e.currentTarget.style.background = 'var(--rust)'}
+                          onMouseLeave={e => e.currentTarget.style.background = 'var(--amber)'}
+                          title="I finished a book for this challenge"
+                        >
+                          📖 +1 Book
+                        </button>
+                      ) : (
+                        <span style={{
+                          padding: '6px 12px', borderRadius: 8,
+                          background: '#e8f5e9', color: 'var(--sage)',
+                          fontSize: 12, fontWeight: 700,
+                        }}>✅ Done!</span>
+                      )}
+                    </div>
+                  )}
+
+                  {expired && !done && (
+                    <span style={{ fontSize: 11, color: '#c0392b', fontWeight: 600 }}>⏰ Ended</span>
+                  )}
                 </div>
               </div>
             )
