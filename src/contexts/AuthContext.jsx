@@ -34,7 +34,6 @@ export function AuthProvider({ children }) {
   }, [])
 
   async function signUp({ name, email, password, adminCode }) {
-    // Verify admin code if provided
     let role = 'member'
     if (adminCode && adminCode.trim()) {
       const { data: valid, error: rpcErr } = await supabase
@@ -47,11 +46,14 @@ export function AuthProvider({ children }) {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: {
-        data: { name, role }
-      }
+      options: { data: { name, role } }
     })
     if (error) throw error
+
+    // Auto sign in immediately — no email confirmation step
+    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
+    if (signInError) throw signInError
+
     return { data, role }
   }
 

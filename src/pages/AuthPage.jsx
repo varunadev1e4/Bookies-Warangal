@@ -45,10 +45,8 @@ export default function AuthPage() {
     setLoading(true)
     try {
       const { role } = await signUp({ name: suName, email: suEmail, password: suPass, adminCode: suAdminCode })
-      success(role === 'admin'
-        ? '🎉 Admin account created! Check your email to confirm.'
-        : '🎉 Welcome! Check your email to confirm your account.')
-      setTab('signin')
+      success(role === 'admin' ? '⚡ Admin account created! Welcome!' : '🎉 Welcome to Warangal Bookies!')
+      navigate('/')
     } catch (err) {
       showError(err.message || 'Sign up failed')
     } finally {

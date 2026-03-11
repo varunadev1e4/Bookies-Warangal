@@ -55,6 +55,7 @@ export default function LeaderboardPage() {
   const location = useLocation()
   const [members, setMembers] = useState([])
   const [tab, setTab]         = useState('points')
+  const [limit, setLimit]     = useState(10)
   const [loading, setLoading] = useState(true)
   const [fetchError, setFetchError] = useState(null)
 
@@ -67,7 +68,7 @@ export default function LeaderboardPage() {
         .from('profiles')
         .select('id, name, points, books_read, role, joined_at')
         .order(orderCol, { ascending: false })
-        .limit(50)
+        .limit(limit)
       if (error) {
         console.error('Leaderboard fetch error:', error)
         setFetchError(error.message)
@@ -78,7 +79,7 @@ export default function LeaderboardPage() {
       setLoading(false)
     }
     fetchMembers()
-  }, [tab, location.key])
+  }, [tab, limit, location.key])
 
   const top3 = members.slice(0, Math.min(3, members.length))
   const rest  = members.slice(3)
@@ -87,9 +88,23 @@ export default function LeaderboardPage() {
     <div className="page-wrapper fade-in">
       <h2 className="section-title" style={{ marginBottom: 16 }}>🏆 Leaderboard</h2>
 
-      <div className="tabs">
-        <button className={`tab ${tab === 'points'  ? 'active' : ''}`} onClick={() => setTab('points')}>By Points</button>
-        <button className={`tab ${tab === 'books'   ? 'active' : ''}`} onClick={() => setTab('books')}>Books Read</button>
+      {/* Tab row + limit pills */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
+        <div className="tabs" style={{ margin: 0 }}>
+          <button className={`tab ${tab === 'points' ? 'active' : ''}`} onClick={() => setTab('points')}>By Points</button>
+          <button className={`tab ${tab === 'books'  ? 'active' : ''}`} onClick={() => setTab('books')}>Books Read</button>
+        </div>
+        <div style={{ display: 'flex', gap: 6 }}>
+          {[10, 20, 50].map(n => (
+            <button key={n} onClick={() => setLimit(n)} style={{
+              padding: '5px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700,
+              border: '1.5px solid', cursor: 'pointer', transition: 'all 0.18s',
+              background: limit === n ? 'var(--amber)' : 'transparent',
+              color:      limit === n ? '#fff' : 'var(--amber)',
+              borderColor: 'var(--amber)',
+            }}>Top {n}</button>
+          ))}
+        </div>
       </div>
 
       {loading
@@ -98,7 +113,6 @@ export default function LeaderboardPage() {
           ? <div className="empty-state">
               <div className="es-icon">⚠️</div>
               <p style={{ color: '#c0392b', fontSize: 13 }}>{fetchError}</p>
-              <p style={{ fontSize: 12, color: 'var(--muted)', marginTop: 6 }}>Check browser console for details</p>
             </div>
         : members.length === 0
           ? <div className="empty-state"><div className="es-icon">🏆</div><p>No members yet.</p></div>
@@ -124,46 +138,75 @@ export default function LeaderboardPage() {
                 </div>
               )}
 
-              {/* Rest of the list */}
-              {rest.map((m, i) => {
-                const rank = i + 4
-                const badge = getBadge(m.points)
-                const isMe = m.id === profile?.id
+              {/* Full ranked table — all members */}
+              <div className="card" style={{ overflow: 'hidden', marginBottom: 20 }}>
+                {/* Table header */}
+                <div style={{
+                  display: 'grid', gridTemplateColumns: '40px 1fr 70px 70px',
+                  padding: '10px 14px', background: 'var(--cream)',
+                  borderBottom: '1px solid var(--border)',
+                  fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 0.5,
+                }}>
+                  <span>#</span>
+                  <span>Member</span>
+                  <span style={{ textAlign: 'center' }}>Books</span>
+                  <span style={{ textAlign: 'right' }}>Points</span>
+                </div>
 
-                return (
-                  <div key={m.id} style={{
-                    display: 'flex', alignItems: 'center', gap: 12,
-                    padding: '12px 14px',
-                    background: isMe ? '#fff9f0' : 'var(--card)',
-                    borderRadius: 'var(--radius)',
-                    border: `1px solid ${isMe ? 'var(--amber)' : 'var(--border)'}`,
-                    marginBottom: 8,
-                    transition: 'all 0.18s',
-                  }}>
-                    <div style={{ fontFamily: 'var(--font-serif)', fontWeight: 700, fontSize: 18, color: 'var(--muted)', width: 28, textAlign: 'center' }}>
-                      {rank}
-                    </div>
-                    <div className="avatar avatar-md">{initials(m.name)}</div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 600, fontSize: 14 }}>
-                        {m.name} {isMe && <span style={{ fontSize: 11, color: 'var(--amber)', fontWeight: 700 }}>(You)</span>}
-                      </div>
-                      <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
-                        {m.books_read} books read · {badge.title}
-                      </div>
-                    </div>
-                    <div style={{ fontSize: 20 }}>{badge.badge}</div>
-                    <div style={{ fontFamily: 'var(--font-serif)', fontWeight: 700, fontSize: 18, color: 'var(--amber)' }}>
-                      {tab === 'books' ? m.books_read : m.points}
-                    </div>
-                  </div>
-                )
-              })}
+                {/* Table rows */}
+                {members.map((m, i) => {
+                  const rank  = i + 1
+                  const badge = getBadge(m.points)
+                  const isMe  = m.id === profile?.id
+                  const rankEmoji = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : null
 
-              {/* My rank if not in view */}
-              {profile && !members.slice(0, 50).find(m => m.id === profile.id) && (
-                <div style={{ textAlign: 'center', padding: '16px 0', fontSize: 13, color: 'var(--muted)' }}>
-                  You're not in the top 50 yet — keep reading! 📚
+                  return (
+                    <div key={m.id} style={{
+                      display: 'grid', gridTemplateColumns: '40px 1fr 70px 70px',
+                      alignItems: 'center', padding: '11px 14px',
+                      background: isMe ? '#fff9f0' : i % 2 === 0 ? 'var(--card)' : '#fdfaf7',
+                      borderBottom: '1px solid var(--border)',
+                      borderLeft: isMe ? '3px solid var(--amber)' : '3px solid transparent',
+                    }}>
+                      {/* Rank */}
+                      <div style={{ fontWeight: 800, fontSize: rankEmoji ? 18 : 14, color: 'var(--muted)', textAlign: 'center' }}>
+                        {rankEmoji || rank}
+                      </div>
+
+                      {/* Name + badge */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                        <div style={{
+                          width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
+                          background: isMe ? 'var(--amber)' : 'var(--cream)',
+                          border: `2px solid ${isMe ? 'var(--amber)' : 'var(--border)'}`,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: 11, fontWeight: 800, color: isMe ? '#fff' : 'var(--ink)',
+                        }}>{initials(m.name)}</div>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontWeight: 600, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {m.name} {isMe && <span style={{ color: 'var(--amber)', fontSize: 10 }}>(You)</span>}
+                          </div>
+                          <div style={{ fontSize: 10, color: 'var(--muted)' }}>{badge.badge} {badge.title}</div>
+                        </div>
+                      </div>
+
+                      {/* Books read */}
+                      <div style={{ textAlign: 'center', fontWeight: tab === 'books' ? 800 : 400, fontSize: 13, color: tab === 'books' ? 'var(--amber)' : 'var(--muted)' }}>
+                        {m.books_read || 0}
+                      </div>
+
+                      {/* Points */}
+                      <div style={{ textAlign: 'right', fontFamily: 'var(--font-serif)', fontWeight: tab === 'points' ? 800 : 600, fontSize: 14, color: tab === 'points' ? 'var(--amber)' : 'var(--ink)' }}>
+                        {m.points || 0}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {profile && !members.find(m => m.id === profile.id) && (
+                <div style={{ textAlign: 'center', padding: '10px 0 20px', fontSize: 13, color: 'var(--muted)' }}>
+                  You're not in the top {limit} yet — keep reading! 📚
                 </div>
               )}
             </>
