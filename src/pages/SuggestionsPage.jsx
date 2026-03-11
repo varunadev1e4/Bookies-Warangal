@@ -22,26 +22,26 @@ export default function SuggestionsPage() {
   const [myVotes,     setMyVotes]     = useState(new Set())
   const [loading,     setLoading]     = useState(true)
   const [showAdd,     setShowAdd]     = useState(false)
-  const [sort,        setSort]        = useState('votes') // 'votes' | 'newest'
+  const [sort,        setSort]        = useState('votes')
+  const [refreshKey,  setRefreshKey]  = useState(0)
 
-  useEffect(() => { fetchAll() }, [])
-
-  async function fetchAll() {
-    setLoading(true)
-    const [{ data: suggs }, { data: votes }] = await Promise.all([
-      supabase.from('suggestions')
-        .select('*, profiles(name, role)')
-        .order(sort === 'votes' ? 'votes' : 'created_at', { ascending: false }),
-      profile?.id
-        ? supabase.from('suggestion_votes').select('suggestion_id').eq('user_id', profile.id)
-        : Promise.resolve({ data: [] }),
-    ])
-    setSuggestions(suggs || [])
-    setMyVotes(new Set((votes || []).map(v => v.suggestion_id)))
-    setLoading(false)
-  }
-
-  useEffect(() => { fetchAll() }, [sort])
+  useEffect(() => {
+    async function fetchAll() {
+      setLoading(true)
+      const [{ data: suggs }, { data: votes }] = await Promise.all([
+        supabase.from('suggestions')
+          .select('*, profiles(name, role)')
+          .order(sort === 'votes' ? 'votes' : 'created_at', { ascending: false }),
+        profile?.id
+          ? supabase.from('suggestion_votes').select('suggestion_id').eq('user_id', profile.id)
+          : Promise.resolve({ data: [] }),
+      ])
+      setSuggestions(suggs || [])
+      setMyVotes(new Set((votes || []).map(v => v.suggestion_id)))
+      setLoading(false)
+    }
+    fetchAll()
+  }, [sort, refreshKey])
 
   async function toggleVote(s) {
     const voted = myVotes.has(s.id)
@@ -175,7 +175,11 @@ export default function SuggestionsPage() {
             })
       }
 
-      <SuggestModal open={showAdd} onClose={() => { setShowAdd(false); fetchAll() }} />
+      <SuggestModal
+        open={showAdd}
+        onClose={() => setShowAdd(false)}
+        onSuccess={() => { setShowAdd(false); setRefreshKey(k => k + 1) }}
+      />
     </div>
   )
 }

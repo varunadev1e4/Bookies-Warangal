@@ -6,7 +6,7 @@ import Modal from './Modal'
 
 const GENRES = ['Fiction','Non-Fiction','Telugu','History','Self-Help','Science','Poetry']
 
-export default function SuggestModal({ open, onClose, prefillTitle = '' }) {
+export default function SuggestModal({ open, onClose, onSuccess, prefillTitle = '' }) {
   const { profile } = useAuth()
   const { success, error: showError } = useToast()
   const [form, setForm]     = useState({ title: prefillTitle, author:'', genre:'Fiction', reason:'' })
@@ -26,7 +26,7 @@ export default function SuggestModal({ open, onClose, prefillTitle = '' }) {
     if (error) { showError(error.message); return }
     success('Suggestion added! Others can vote on it 💡')
     setForm({ title:'', author:'', genre:'Fiction', reason:'' })
-    onClose()
+    ;(onSuccess || onClose)()
   }
 
   return (
