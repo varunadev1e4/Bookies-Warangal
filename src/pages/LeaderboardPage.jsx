@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -51,11 +52,13 @@ function PodiumCard({ member, rank, style = {} }) {
 
 export default function LeaderboardPage() {
   const { profile } = useAuth()
+  const location = useLocation()
   const [members, setMembers] = useState([])
-  const [tab, setTab]         = useState('points')  // 'points' | 'books' | 'monthly'
+  const [tab, setTab]         = useState('points')
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => { fetchMembers() }, [tab])
+  // Refetch whenever the user navigates to this page OR switches tab
+  useEffect(() => { fetchMembers() }, [tab, location.key])
 
   async function fetchMembers() {
     setLoading(true)

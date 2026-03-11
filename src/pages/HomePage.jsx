@@ -154,10 +154,19 @@ export default function HomePage() {
     setMyProgress(prev => ({ ...prev, [challenge.id]: newVal }))
 
     if (delta > 0) {
-      // Award points for each book logged
+      // Fetch FRESH points from DB — never use profile.points (it's a stale closure)
+      const { data: freshData } = await supabase
+        .from('profiles')
+        .select('points')
+        .eq('id', profile.id)
+        .single()
+      const freshPoints = freshData?.points || 0
+
+      const bonusPoints = newVal === challenge.target ? 5 + challenge.points_reward : 5
+
       await supabase
         .from('profiles')
-        .update({ points: (profile.points || 0) + 5 })
+        .update({ points: freshPoints + bonusPoints })
         .eq('id', profile.id)
 
       // Log to activity feed
@@ -167,13 +176,7 @@ export default function HomePage() {
         target: challenge.title,
       })
 
-      // Check if challenge just completed
       if (newVal === challenge.target) {
-        // Award the full bonus points
-        await supabase
-          .from('profiles')
-          .update({ points: (profile.points || 0) + 5 + challenge.points_reward })
-          .eq('id', profile.id)
         success(`🏆 Challenge complete! +${challenge.points_reward} bonus points!`)
       } else {
         success(`+1 book logged! +5 pts · ${newVal}/${challenge.target} done 📚`)
