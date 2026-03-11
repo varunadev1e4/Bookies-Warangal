@@ -154,7 +154,10 @@ export default function AdminPage() {
   async function changeAdminCode() {
     if (!newCode.trim() || newCode.length < 6) { showError('Code must be at least 6 characters'); return }
     setCodeLoading(true)
-    const { error } = await supabase.from('settings').upsert({ key: 'admin_code', value: newCode.trim() })
+    const { error } = await supabase
+      .from('settings')
+      .update({ value: newCode.trim() })
+      .eq('key', 'admin_code')
     setCodeLoading(false)
     if (error) { showError(error.message); return }
     success('Admin code updated!')
