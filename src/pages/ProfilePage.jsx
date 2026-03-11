@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
 import Modal from '../components/Modal'
+import SuggestModal from '../components/SuggestModal'
 
 const BADGES = [
   { key:'bookworm', icon:'📚', label:'Bookworm',    desc:'Read 5 books',    earned:(p)=>p.books_read>=5  },
@@ -39,9 +40,11 @@ export default function ProfilePage() {
   const [borrows,       setBorrows]       = useState([])
   const [challengeReads, setChallengeReads] = useState([])
   const [reviews,       setReviews]       = useState([])
+  const [myBooks,       setMyBooks]       = useState([])
   const [attended,  setAttended]  = useState(0)
   const [loading,   setLoading]   = useState(true)
   const [histTab,   setHistTab]   = useState('all')   // 'all' | 'active' | 'returned'
+  const [showSuggest, setShowSuggest] = useState(false)
 
   const [showReview, setShowReview] = useState(false)
   const [books,      setBooks]      = useState([])
@@ -62,6 +65,7 @@ export default function ProfilePage() {
       { data: crData },
       { data: reviewData },
       { count: attCount },
+      { data: myBooksData },
     ] = await Promise.all([
       supabase.from('borrows')
         .select('*, books(title,emoji,author,genre)')
@@ -79,11 +83,16 @@ export default function ProfilePage() {
         .select('*', { count:'exact', head:true })
         .eq('user_id', profile.id)
         .eq('attended', true),
+      supabase.from('books')
+        .select('id, title, author, emoji, genre, available_copies, total_copies, created_at')
+        .eq('created_by', profile.id)
+        .order('created_at', { ascending: false }),
     ])
     setBorrows(borrowData || [])
     setChallengeReads(crData || [])
     setReviews(reviewData || [])
     setAttended(attCount || 0)
+    setMyBooks(myBooksData || [])
     setLoading(false)
   }
 
@@ -187,8 +196,9 @@ export default function ProfilePage() {
       </div>
 
       {/* ── Action buttons ── */}
-      <div style={{ display:'flex', gap:10, marginBottom:16 }}>
-        <button className="btn btn-primary" style={{ flex:1 }} onClick={() => setShowReview(true)}>⭐ Write Review</button>
+      <div style={{ display:'flex', gap:8, marginBottom:16, flexWrap:'wrap' }}>
+        <button className="btn btn-primary" style={{ flex:1 }} onClick={() => setShowReview(true)}>⭐ Review</button>
+        <button className="btn btn-outline" style={{ flex:1 }} onClick={() => setShowSuggest(true)}>💡 Suggest</button>
         <button className="btn btn-outline" style={{ flex:1 }} onClick={() => navigate('/members')}>👥 Members</button>
         <button className="btn btn-outline" onClick={() => { setEditName(profile.name); setEditBio(profile.bio||''); setShowEdit(true) }}>✏️</button>
       </div>
@@ -309,6 +319,38 @@ export default function ProfilePage() {
         }
       </div>
 
+      {/* ── My Library (books I added) ── */}
+      {myBooks.length > 0 && (
+        <div className="card" style={{ marginBottom:14 }}>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:12 }}>
+            <h3 style={{ fontWeight:700, fontSize:15 }}>📚 My Library Contributions</h3>
+            <span style={{ fontSize:12, color:'var(--muted)' }}>{myBooks.length} book{myBooks.length!==1?'s':''}</span>
+          </div>
+          {myBooks.map(b => (
+            <div key={b.id} style={{ display:'flex', alignItems:'center', gap:12, padding:'10px 0', borderBottom:'1px solid var(--border)' }}>
+              <div style={{
+                width:40, height:52, borderRadius:6, flexShrink:0,
+                background:'linear-gradient(135deg,#2d1200,#8b3a00)',
+                display:'flex', alignItems:'center', justifyContent:'center', fontSize:20,
+              }}>{b.emoji}</div>
+              <div style={{ flex:1, minWidth:0 }}>
+                <div style={{ fontWeight:600, fontSize:13, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{b.title}</div>
+                <div style={{ fontSize:11, color:'var(--muted)' }}>by {b.author} · {b.genre}</div>
+                <div style={{ fontSize:10, color:'var(--muted)', marginTop:2 }}>
+                  Added {new Date(b.created_at).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}
+                </div>
+              </div>
+              <div style={{ textAlign:'right', flexShrink:0 }}>
+                <div style={{ fontSize:12, fontWeight:700, color: b.available_copies > 0 ? 'var(--sage)' : 'var(--amber)' }}>
+                  {b.available_copies}/{b.total_copies}
+                </div>
+                <div style={{ fontSize:10, color:'var(--muted)' }}>available</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* ── My Reviews ── */}
       {reviews.length > 0 && (
         <div className="card" style={{ marginBottom:14 }}>
@@ -374,6 +416,9 @@ export default function ProfilePage() {
           <button className="btn btn-outline" onClick={() => setShowEdit(false)}>Cancel</button>
         </div>
       </Modal>
+
+      {/* ── Suggest Modal ── */}
+      <SuggestModal open={showSuggest} onClose={() => setShowSuggest(false)} />
     </div>
   )
 }

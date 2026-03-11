@@ -11,6 +11,7 @@ import ProfilePage from './pages/ProfilePage'
 import AdminPage from './pages/AdminPage'
 import NotificationsPage from './pages/NotificationsPage'
 import MembersPage from './pages/MembersPage'
+import SuggestionsPage from './pages/SuggestionsPage'
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth()
@@ -57,6 +58,7 @@ function AppRoutes() {
               <Route path="/profile"    element={<ProfilePage />}   />
               <Route path="/notifications" element={<NotificationsPage />} />
               <Route path="/members" element={<MembersPage />} />
+              <Route path="/suggestions" element={<SuggestionsPage />} />
               <Route path="/admin"      element={
                 <AdminRoute><AdminPage /></AdminRoute>
               } />
