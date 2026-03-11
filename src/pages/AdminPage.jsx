@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
+import { notifyAllMembers } from '../lib/notifications'
 import Modal from '../components/Modal'
 
 function StatCard({ num, label, color = 'var(--amber)' }) {
@@ -105,9 +106,15 @@ export default function AdminPage() {
     const { error } = await supabase.from('announcements').insert({
       ...announceForm, created_by: profile.id,
     })
+    if (error) { showError(error.message); setFormLoading(false); return }
+    await notifyAllMembers({
+      type:  'announcement',
+      title: `📣 ${announceForm.title}`,
+      body:  announceForm.body || '',
+      link:  '/',
+    })
     setFormLoading(false)
-    if (error) { showError(error.message); return }
-    success('Announcement sent to all members! 📢')
+    success('Announcement sent! Members notified 🔔')
     setShowAnnounce(false)
     setAnnounceForm({ title: '', body: '' })
   }

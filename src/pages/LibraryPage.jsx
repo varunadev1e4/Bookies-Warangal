@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
+import { notifyAllMembers } from '../lib/notifications'
 import Modal from '../components/Modal'
 
 const GENRES = ['All', 'Fiction', 'Non-Fiction', 'Telugu', 'History', 'Self-Help', 'Science', 'Poetry']
@@ -125,6 +126,14 @@ export default function LibraryPage() {
     })
     // Reward points for contributing
     await supabase.from('profiles').update({ points: (profile.points || 0) + 25 }).eq('id', profile.id)
+
+    // Notify all members
+    await notifyAllMembers({
+      type:  'new_book',
+      title: `New Book: ${form.title}`,
+      body:  `by ${form.author} · ${form.genre} — now available in the library!`,
+      link:  '/library',
+    })
 
     setAddLoading(false)
     success(`"${form.title}" added to library! +25 points 📚`)
