@@ -47,6 +47,32 @@ function ActivityItem({ item }) {
   )
 }
 
+function PastChallenges({ past, ChallengeCard }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div style={{ marginBottom: 10 }}>
+      <button onClick={() => setOpen(v => !v)} style={{
+        width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '12px 16px', borderRadius: 'var(--radius)',
+        background: 'var(--cream)', border: '1px dashed var(--border)',
+        cursor: 'pointer', fontFamily: 'var(--font-sans)',
+        marginBottom: open ? 10 : 0,
+      }}>
+        <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span>🗂️</span>
+          Past Challenges
+          <span style={{
+            background: 'var(--border)', color: 'var(--muted)',
+            fontSize: 11, fontWeight: 700, padding: '1px 7px', borderRadius: 10,
+          }}>{past.length}</span>
+        </span>
+        <span style={{ fontSize: 13, color: 'var(--muted)', fontWeight: 700 }}>{open ? '▲ Hide' : '▼ Show'}</span>
+      </button>
+      {open && past.map(c => <ChallengeCard key={c.id} c={c} isPast={true} />)}
+    </div>
+  )
+}
+
 export default function HomePage() {
   const { profile, refreshProfile } = useAuth()
   const { success, error: showError } = useToast()
@@ -294,115 +320,115 @@ export default function HomePage() {
       </div>
 
       {/* ── Reading Challenges ── */}
-      {challenges.length > 0 && (
-        <>
-          <div className="section-header">
-            <h2 className="section-title">📊 Challenges</h2>
-          </div>
-          {challenges.map(c => {
-            const completed = myProgress[c.id] || 0
-            const pct       = Math.min(100, Math.round((completed / c.target) * 100))
-            const done      = completed >= c.target
-            const expired   = c.end_date && new Date(c.end_date) < new Date()
+      {challenges.length > 0 && (() => {
+        const active = challenges.filter(c => !c.end_date || new Date(c.end_date) >= new Date())
+        const past   = challenges.filter(c => c.end_date && new Date(c.end_date) < new Date())
 
-            return (
-              <div key={c.id} className="card" style={{ padding: '16px', marginBottom: 10 }}>
-                {/* Title row */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
-                  <div style={{ flex: 1, paddingRight: 12 }}>
-                    <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 2 }}>
-                      {c.title}
-                      {done && <span style={{ marginLeft: 8, fontSize: 13 }}>🏆</span>}
-                    </div>
-                    <div style={{ fontSize: 11, color: 'var(--muted)' }}>
-                      {c.end_date && `Ends ${new Date(c.end_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} · `}
-                      +{c.points_reward} pts on completion
-                    </div>
+        const ChallengeCard = ({ c, isPast }) => {
+          const completed = myProgress[c.id] || 0
+          const pct       = Math.min(100, Math.round((completed / c.target) * 100))
+          const done      = completed >= c.target
+
+          return (
+            <div className="card" style={{
+              padding: '16px', marginBottom: 10,
+              opacity: isPast ? 0.75 : 1,
+              background: isPast ? '#faf7f4' : 'var(--card)',
+            }}>
+              {/* Title row */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+                <div style={{ flex: 1, paddingRight: 12 }}>
+                  <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 2 }}>
+                    {c.title}
+                    {done && <span style={{ marginLeft: 8 }}>🏆</span>}
                   </div>
-                  <span style={{
-                    fontFamily: 'var(--font-serif)', fontWeight: 700, fontSize: 20,
-                    color: done ? 'var(--sage)' : 'var(--amber)', flexShrink: 0,
-                  }}>{pct}%</span>
+                  <div style={{ fontSize: 11, color: 'var(--muted)' }}>
+                    {isPast
+                      ? `Ended ${new Date(c.end_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}`
+                      : c.end_date
+                        ? `Ends ${new Date(c.end_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}`
+                        : 'No end date'
+                    }
+                    {' · '}+{c.points_reward} pts reward
+                  </div>
                 </div>
-
-                {/* Progress bar */}
-                <div style={{ height: 10, background: 'var(--cream)', borderRadius: 10, marginBottom: 10, overflow: 'hidden' }}>
-                  <div style={{
-                    height: '100%', borderRadius: 10,
-                    background: done
-                      ? 'linear-gradient(90deg, #3d6b34, #5a9e4a)'
-                      : 'linear-gradient(90deg, var(--amber), var(--amber-light))',
-                    width: `${pct}%`,
-                    transition: 'width 0.5s ease',
-                  }} />
-                </div>
-
-                {/* Books count + buttons */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: 13, color: 'var(--muted)' }}>
-                    <strong style={{ color: 'var(--ink)', fontFamily: 'var(--font-serif)', fontSize: 16 }}>{completed}</strong>
-                    <span style={{ fontSize: 12 }}> / {c.target} books</span>
-                    {done && <span style={{ color: 'var(--sage)', fontWeight: 700, marginLeft: 8 }}>Complete!</span>}
-                  </span>
-
-                  {!expired && (
-                    <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                      {/* Undo button — only show if progress > 0 */}
-                      {completed > 0 && !done && (
-                        <button
-                          onClick={() => updateProgress(c, -1)}
-                          style={{
-                            width: 30, height: 30, borderRadius: 8,
-                            border: '1.5px solid var(--border)',
-                            background: 'transparent', cursor: 'pointer',
-                            fontSize: 15, color: 'var(--muted)',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            transition: 'all 0.18s',
-                          }}
-                          title="Undo last book"
-                          onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--amber)'}
-                          onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
-                        >−</button>
-                      )}
-
-                      {/* Main +1 button */}
-                      {!done ? (
-                        <button
-                          onClick={() => updateProgress(c, 1)}
-                          style={{
-                            padding: '6px 14px', borderRadius: 8,
-                            background: 'var(--amber)', color: '#fff',
-                            border: 'none', cursor: 'pointer',
-                            fontSize: 12, fontWeight: 700,
-                            fontFamily: 'var(--font-sans)',
-                            display: 'flex', alignItems: 'center', gap: 5,
-                            transition: 'all 0.18s',
-                          }}
-                          onMouseEnter={e => e.currentTarget.style.background = 'var(--rust)'}
-                          onMouseLeave={e => e.currentTarget.style.background = 'var(--amber)'}
-                          title="I finished a book for this challenge"
-                        >
-                          📖 +1 Book
-                        </button>
-                      ) : (
-                        <span style={{
-                          padding: '6px 12px', borderRadius: 8,
-                          background: '#e8f5e9', color: 'var(--sage)',
-                          fontSize: 12, fontWeight: 700,
-                        }}>✅ Done!</span>
-                      )}
-                    </div>
-                  )}
-
-                  {expired && !done && (
-                    <span style={{ fontSize: 11, color: '#c0392b', fontWeight: 600 }}>⏰ Ended</span>
-                  )}
-                </div>
+                <span style={{
+                  fontFamily: 'var(--font-serif)', fontWeight: 700, fontSize: 20, flexShrink: 0,
+                  color: done ? 'var(--sage)' : isPast ? 'var(--muted)' : 'var(--amber)',
+                }}>{pct}%</span>
               </div>
-            )
-          })}
-        </>
-      )}
+
+              {/* Progress bar */}
+              <div style={{ height: 10, background: 'var(--cream)', borderRadius: 10, marginBottom: 10, overflow: 'hidden' }}>
+                <div style={{
+                  height: '100%', borderRadius: 10, width: `${pct}%`, transition: 'width 0.5s ease',
+                  background: done
+                    ? 'linear-gradient(90deg,#3d6b34,#5a9e4a)'
+                    : isPast
+                      ? 'linear-gradient(90deg,#aaa,#ccc)'
+                      : 'linear-gradient(90deg,var(--amber),var(--amber-light))',
+                }} />
+              </div>
+
+              {/* Bottom row */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: 13, color: 'var(--muted)' }}>
+                  <strong style={{ color: 'var(--ink)', fontFamily: 'var(--font-serif)', fontSize: 16 }}>{completed}</strong>
+                  {' / '}{c.target} books
+                  {done && <span style={{ color: 'var(--sage)', fontWeight: 700, marginLeft: 8 }}>Complete!</span>}
+                </span>
+
+                {/* Active challenge buttons */}
+                {!isPast && !done && (
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                    {completed > 0 && (
+                      <button onClick={() => updateProgress(c, -1)} title="Undo" style={{
+                        width: 30, height: 30, borderRadius: 8,
+                        border: '1.5px solid var(--border)', background: 'transparent',
+                        cursor: 'pointer', fontSize: 15, color: 'var(--muted)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}>−</button>
+                    )}
+                    <button onClick={() => updateProgress(c, 1)} style={{
+                      padding: '6px 14px', borderRadius: 8, background: 'var(--amber)',
+                      color: '#fff', border: 'none', cursor: 'pointer',
+                      fontSize: 12, fontWeight: 700, fontFamily: 'var(--font-sans)',
+                    }}>📖 +1 Book</button>
+                  </div>
+                )}
+                {!isPast && done && (
+                  <span style={{ padding: '6px 12px', borderRadius: 8, background: '#e8f5e9', color: 'var(--sage)', fontSize: 12, fontWeight: 700 }}>✅ Done!</span>
+                )}
+                {isPast && done && (
+                  <span style={{ padding: '6px 10px', borderRadius: 8, background: '#e8f5e9', color: 'var(--sage)', fontSize: 11, fontWeight: 700 }}>✅ Completed</span>
+                )}
+                {isPast && !done && (
+                  <span style={{ padding: '6px 10px', borderRadius: 8, background: '#fdecea', color: '#c0392b', fontSize: 11, fontWeight: 700 }}>⏰ Missed</span>
+                )}
+              </div>
+            </div>
+          )
+        }
+
+        return (
+          <>
+            {/* Active challenges */}
+            {active.length > 0 && (
+              <>
+                <div className="section-header">
+                  <h2 className="section-title">📊 Active Challenges</h2>
+                </div>
+                {active.map(c => <ChallengeCard key={c.id} c={c} isPast={false} />)}
+              </>
+            )}
+
+            {/* Past challenges — collapsible */}
+            {past.length > 0 && (
+              <PastChallenges past={past} ChallengeCard={ChallengeCard} />
+            )}
+          </>
+        )
+      })()}
 
       {/* ── Activity Feed ── */}
       <div className="section-header" style={{ marginTop: 10 }}>
