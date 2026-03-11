@@ -7,7 +7,7 @@ const NAV = [
   { to: '/',            icon: '🏠', label: 'Home'      },
   { to: '/library',     icon: '📚', label: 'Library'   },
   { to: '/meetups',     icon: '🗓️', label: 'Meetups'   },
-  { to: '/leaderboard', icon: '🏆', label: 'Ranks'     },
+  { to: '/suggestions', icon: '💡', label: 'Suggest'   },
   { to: '/profile',     icon: '👤', label: 'Profile'   },
 ]
 

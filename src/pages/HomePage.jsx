@@ -326,10 +326,10 @@ export default function HomePage() {
       {/* ── Quick Actions ── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10, marginBottom: 22 }}>
         {[
-          { icon: '📚', label: 'Library',      to: '/library'     },
-          { icon: '🗓️', label: 'Meetups',      to: '/meetups'     },
-          { icon: '💡', label: 'Suggestions',  to: '/suggestions' },
-          { icon: '👤', label: 'My Profile',   to: '/profile'     },
+          { icon: '📚', label: 'Library',     to: '/library'     },
+          { icon: '🗓️', label: 'Meetups',     to: '/meetups'     },
+          { icon: '🏆', label: 'Rankings',    to: '/leaderboard' },
+          { icon: '💡', label: 'Suggestions', to: '/suggestions' },
         ].map(qa => (
           <div key={qa.to} onClick={() => navigate(qa.to)}
             style={{
