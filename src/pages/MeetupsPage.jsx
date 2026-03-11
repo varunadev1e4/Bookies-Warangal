@@ -201,10 +201,9 @@ export default function MeetupsPage() {
       }))
       await supabase.from('meetup_attendance').insert(rows)
 
-      // Notify each attendee + award 10 pts
+      // Award 10 pts + notify each attendee via secure RPC
       for (const uid of markedIds) {
-        const { data: p } = await supabase.from('profiles').select('points').eq('id', uid).single()
-        await supabase.from('profiles').update({ points: (p?.points || 0) + 10 }).eq('id', uid)
+        await supabase.rpc('award_points', { p_user_id: uid, p_points: 10 })
         await supabase.from('notifications').insert({
           user_id: uid,
           type:    'attendance',
