@@ -56,21 +56,29 @@ export default function LeaderboardPage() {
   const [members, setMembers] = useState([])
   const [tab, setTab]         = useState('points')
   const [loading, setLoading] = useState(true)
+  const [fetchError, setFetchError] = useState(null)
 
-  // Refetch whenever the user navigates to this page OR switches tab
-  useEffect(() => { fetchMembers() }, [tab, location.key])
-
-  async function fetchMembers() {
-    setLoading(true)
-    const orderCol = tab === 'books' ? 'books_read' : 'points'
-    const { data } = await supabase
-      .from('profiles')
-      .select('id, name, points, books_read, role, joined_at')
-      .order(orderCol, { ascending: false })
-      .limit(50)
-    setMembers(data || [])
-    setLoading(false)
-  }
+  useEffect(() => {
+    async function fetchMembers() {
+      setLoading(true)
+      setFetchError(null)
+      const orderCol = tab === 'books' ? 'books_read' : 'points'
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, name, points, books_read, role, joined_at')
+        .order(orderCol, { ascending: false })
+        .limit(50)
+      if (error) {
+        console.error('Leaderboard fetch error:', error)
+        setFetchError(error.message)
+        setMembers([])
+      } else {
+        setMembers(data || [])
+      }
+      setLoading(false)
+    }
+    fetchMembers()
+  }, [tab, location.key])
 
   const top3 = members.slice(0, 3)
   const rest  = members.slice(3)
@@ -86,6 +94,12 @@ export default function LeaderboardPage() {
 
       {loading
         ? <div style={{ display: 'flex', justifyContent: 'center', padding: '40px 0' }}><div className="spinner" /></div>
+        : fetchError
+          ? <div className="empty-state">
+              <div className="es-icon">⚠️</div>
+              <p style={{ color: '#c0392b', fontSize: 13 }}>{fetchError}</p>
+              <p style={{ fontSize: 12, color: 'var(--muted)', marginTop: 6 }}>Check browser console for details</p>
+            </div>
         : members.length === 0
           ? <div className="empty-state"><div className="es-icon">🏆</div><p>No members yet.</p></div>
           : (
