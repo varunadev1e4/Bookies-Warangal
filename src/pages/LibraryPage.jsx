@@ -19,6 +19,27 @@ function StatusBadge({ status }) {
   return <span style={{ background:s.bg, color:s.color, fontSize:10, fontWeight:700, padding:'3px 8px', borderRadius:10 }}>{s.label}</span>
 }
 
+function avgRating(reviews) {
+  if (!reviews?.length) return null
+  return (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1)
+}
+
+function StarDisplay({ reviews }) {
+  const avg = avgRating(reviews)
+  if (!avg) return <span style={{ fontSize:10, color:'var(--muted)' }}>No reviews yet</span>
+  const full  = Math.floor(avg)
+  const half  = avg - full >= 0.5
+  return (
+    <span style={{ display:'flex', alignItems:'center', gap:3 }}>
+      {[1,2,3,4,5].map(n => (
+        <span key={n} style={{ fontSize:11, filter: n <= full ? 'none' : half && n === full+1 ? 'none' : 'grayscale(1)', opacity: n <= full ? 1 : half && n === full+1 ? 0.6 : 0.25 }}>⭐</span>
+      ))}
+      <span style={{ fontSize:11, fontWeight:700, color:'var(--amber)', marginLeft:2 }}>{avg}</span>
+      <span style={{ fontSize:10, color:'var(--muted)' }}>({reviews.length})</span>
+    </span>
+  )
+}
+
 export default function LibraryPage() {
   const { profile, isAdmin, refreshProfile } = useAuth()
   const { success, error: showError } = useToast()
@@ -60,7 +81,7 @@ export default function LibraryPage() {
     setLoading(true)
     const { data, error } = await supabase
       .from('books')
-      .select('*, adder:profiles!created_by(name)')
+      .select('*, adder:profiles!created_by(name), reviews(rating)')
       .order('created_at', { ascending: false })
     if (error) showError('Failed to load books')
     else setBooks(data || [])
@@ -314,6 +335,10 @@ export default function LibraryPage() {
                     <div style={{ fontSize:10, color:'var(--muted)', marginTop:6 }}>
                       {book.available_copies}/{book.total_copies} available
                     </div>
+                    {/* Rating */}
+                    <div style={{ marginTop:5 }}>
+                      <StarDisplay reviews={book.reviews} />
+                    </div>
                     {/* Who added */}
                     <div style={{ fontSize:10, marginTop:4, color: book.created_by===profile?.id ? 'var(--sage)' : 'var(--muted)', fontWeight: book.created_by===profile?.id ? 700 : 400 }}>
                       {book.created_by===profile?.id ? '✦ Added by you' : `Added by ${book.adder?.name || 'member'}`}
@@ -346,6 +371,9 @@ export default function LibraryPage() {
                   }
                 </div>
                 <span className="tag tag-amber">{selected.genre}</span>
+                <div style={{ marginTop:10 }}>
+                  <StarDisplay reviews={selected.reviews} />
+                </div>
                 <p style={{ fontSize:12, marginTop:8 }}>
                   <StatusBadge status={selected.available_copies>0?'available':'borrowed'} />
                   <span style={{ color:'var(--muted)', marginLeft:8, fontSize:12 }}>
