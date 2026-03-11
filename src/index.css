@@ -1,0 +1,291 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap');
+
+:root {
+  --ink:          #1a0a00;
+  --paper:        #fdf6ec;
+  --amber:        #d4700a;
+  --amber-light:  #f0a030;
+  --amber-pale:   #fde8cc;
+  --rust:         #8b2500;
+  --sage:         #3d6b34;
+  --cream:        #f7ede0;
+  --muted:        #8a7060;
+  --border:       #e8d8c4;
+  --card:         #fffaf4;
+  --shadow:       0 2px 16px rgba(26,10,0,0.09);
+  --shadow-lg:    0 8px 40px rgba(26,10,0,0.15);
+  --radius:       12px;
+  --radius-lg:    20px;
+  --font-serif:   'Playfair Display', Georgia, serif;
+  --font-sans:    'DM Sans', system-ui, sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--font-sans);
+  background: var(--paper);
+  color: var(--ink);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* ── Typography ── */
+h1, h2, h3 { font-family: var(--font-serif); line-height: 1.2; }
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+/* ── Input / Select ── */
+.input {
+  width: 100%;
+  padding: 11px 14px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  background: var(--paper);
+  color: var(--ink);
+  transition: border-color 0.2s;
+  outline: none;
+}
+.input:focus { border-color: var(--amber); }
+.input::placeholder { color: var(--muted); }
+
+textarea.input { resize: vertical; min-height: 80px; }
+
+/* ── Buttons ── */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 10px 18px;
+  border-radius: var(--radius);
+  border: none;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s;
+  white-space: nowrap;
+  line-height: 1;
+}
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-primary  { background: var(--amber); color: #fff; }
+.btn-primary:hover:not(:disabled)  { background: var(--rust); transform: translateY(-1px); }
+.btn-success  { background: var(--sage); color: #fff; }
+.btn-success:hover:not(:disabled)  { filter: brightness(1.1); }
+.btn-danger   { background: #c0392b; color: #fff; }
+.btn-outline  { background: transparent; border: 1.5px solid var(--border); color: var(--ink); }
+.btn-outline:hover:not(:disabled)  { border-color: var(--amber); color: var(--amber); }
+.btn-ghost    { background: transparent; border: none; color: var(--muted); }
+.btn-ghost:hover { color: var(--ink); }
+.btn-sm  { padding: 7px 13px; font-size: 12px; }
+.btn-lg  { padding: 14px 24px; font-size: 15px; width: 100%; }
+.btn-icon { padding: 8px; border-radius: 8px; }
+
+/* ── Card ── */
+.card {
+  background: var(--card);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  padding: 20px;
+  box-shadow: var(--shadow);
+}
+.card + .card { margin-top: 14px; }
+
+/* ── Tags / Chips ── */
+.tag {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+.tag-amber  { background: var(--amber-pale); color: #8b3a00; }
+.tag-green  { background: #d4f0d4; color: #1a6b1a; }
+.tag-purple { background: #e8d4f0; color: #5a1a8b; }
+.tag-blue   { background: #d4e8f0; color: #1a4a6b; }
+.tag-red    { background: #f0d4d4; color: #6b1a1a; }
+
+/* ── Section header ── */
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.section-title {
+  font-family: var(--font-serif);
+  font-size: 20px;
+  font-weight: 700;
+}
+
+/* ── Filter chips ── */
+.chips {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: none;
+  margin-bottom: 16px;
+}
+.chips::-webkit-scrollbar { display: none; }
+.chip {
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.18s;
+  font-family: var(--font-sans);
+  color: var(--ink);
+}
+.chip:hover  { border-color: var(--amber); }
+.chip.active { background: var(--amber); color: #fff; border-color: var(--amber); }
+
+/* ── Tabs ── */
+.tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--cream);
+  padding: 4px;
+  border-radius: 10px;
+  margin-bottom: 18px;
+}
+.tab {
+  flex: 1;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.18s;
+  color: var(--muted);
+}
+.tab.active {
+  background: white;
+  color: var(--ink);
+  font-weight: 600;
+  box-shadow: var(--shadow);
+}
+
+/* ── Modal ── */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(26,10,0,0.55);
+  z-index: 500;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: env(safe-area-inset-bottom, 0);
+  animation: fadeIn 0.2s ease;
+}
+.modal-sheet {
+  background: var(--card);
+  border-radius: 22px 22px 0 0;
+  padding: 24px 22px 36px;
+  width: 100%;
+  max-width: 580px;
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: slideUp 0.3s ease;
+}
+.modal-handle {
+  width: 40px; height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  margin: 0 auto 20px;
+}
+.modal-title {
+  font-family: var(--font-serif);
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 18px;
+}
+
+/* ── Spinner ── */
+.spinner {
+  width: 36px; height: 36px;
+  border: 3px solid var(--border);
+  border-top-color: var(--amber);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+.spinner-sm { width: 18px; height: 18px; border-width: 2px; }
+
+/* ── Empty state ── */
+.empty-state {
+  text-align: center;
+  padding: 48px 20px;
+  color: var(--muted);
+}
+.empty-state .es-icon { font-size: 48px; margin-bottom: 12px; }
+.empty-state p { font-size: 14px; line-height: 1.5; }
+
+/* ── Avatar ── */
+.avatar {
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+  font-weight: 700;
+  color: #fff;
+  background: var(--amber);
+  flex-shrink: 0;
+  line-height: 1;
+}
+.avatar-sm  { width: 32px; height: 32px; font-size: 11px; }
+.avatar-md  { width: 40px; height: 40px; font-size: 14px; }
+.avatar-lg  { width: 64px; height: 64px; font-size: 22px; }
+.avatar-xl  { width: 80px; height: 80px; font-size: 28px; border: 4px solid rgba(255,255,255,0.2); }
+
+/* ── Divider ── */
+hr.divider { border: none; border-top: 1px solid var(--border); margin: 14px 0; }
+
+/* ── Form group ── */
+.form-group { margin-bottom: 12px; }
+.form-label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.form-actions { display: flex; gap: 10px; margin-top: 16px; }
+.form-actions .btn-lg { flex: 1; }
+
+/* ── Loading screen ── */
+.loading-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 16px;
+  background: var(--paper);
+}
+
+/* ── Page layout ── */
+.page-wrapper {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 20px 16px 90px;
+}
+
+/* ── Animations ── */
+@keyframes fadeIn     { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fadeInUp   { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes slideUp    { from { transform: translateY(60px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+@keyframes spin       { to { transform: rotate(360deg); } }
+
+.fade-in { animation: fadeIn 0.3s ease; }
+.slide-up { animation: slideUp 0.35s ease; }
+
+/* ── Responsive ── */
+@media (min-width: 640px) {
+  .page-wrapper { padding: 24px 24px 100px; }
+}
