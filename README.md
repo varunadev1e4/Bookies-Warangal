@@ -1,6 +1,6 @@
-# 📚 Bookies India — React PWA
+# 📚 Warangal Bookies — React PWA
 
-Full-stack Progressive Web App for reading communities across India.  
+Full-stack Progressive Web App for Warangal's community book club.  
 **Stack:** React 18 + Vite · Supabase (Auth + DB) · React Router · Deployed on Vercel
 
 ---
@@ -34,7 +34,7 @@ Full-stack Progressive Web App for reading communities across India.
 ### Step 1 — Supabase
 
 1. Go to [supabase.com](https://supabase.com) → **New Project**
-2. Name it `bookies-india`, set a strong password, choose **Asia South (Mumbai)**
+2. Name it `warangal-bookies`, set a strong password, choose **Asia South (Mumbai)**
 3. Wait ~2 minutes for it to start
 4. Go to **SQL Editor** → **New Query**
 5. Paste the entire contents of `supabase/schema.sql` and click **Run**
@@ -46,7 +46,7 @@ Full-stack Progressive Web App for reading communities across India.
 
 ```bash
 # Clone / download this folder
-cd bookies-india-react
+cd warangal-bookies-react
 
 # Install dependencies
 npm install
@@ -174,4 +174,4 @@ The app works offline once installed (cached via Service Worker).
 
 ---
 
-Built with ❤️ for **Bookies India** — reading communities across the country 📚
+Built with ❤️ for **Warangal Bookies** — 750+ readers strong 📚

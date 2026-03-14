@@ -61,7 +61,7 @@ export default function Layout({ children }) {
         <NavLink to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ fontSize: 22 }}>📚</span>
           <span style={{ fontFamily: 'var(--font-serif)', fontWeight: 900, fontSize: 19, color: '#f0a030' }}>
-            Bookies India
+            Warangal Bookies
           </span>
         </NavLink>
 

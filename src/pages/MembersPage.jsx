@@ -91,7 +91,7 @@ export default function MembersPage() {
       {/* Search */}
       <input
         className="input"
-        placeholder="🔍  Search by name or community…"
+        placeholder="🔍  Search by name or city…"
         value={query}
         onChange={e => setQuery(e.target.value)}
         style={{ marginBottom: 14 }}
@@ -137,7 +137,7 @@ export default function MembersPage() {
                       {m.role === 'admin' && <span style={{ fontSize: 10, background: '#3d6b34', color: '#fff', padding: '1px 6px', borderRadius: 8, flexShrink: 0 }}>Admin</span>}
                     </div>
                     <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
-                      {b.badge} {b.title} · {m.books_read || 0} books · {m.city || 'India'}
+                      {b.badge} {b.title} · {m.books_read || 0} books · {m.city || 'Warangal'}
                     </div>
                   </div>
                   {/* Points */}
@@ -174,7 +174,7 @@ export default function MembersPage() {
               </h3>
               {selected.bio && <p style={{ fontSize: 12, opacity: 0.7, fontStyle: 'italic', marginBottom: 8 }}>{selected.bio}</p>}
               <p style={{ fontSize: 12, opacity: 0.6 }}>
-                📍 {selected.city || 'India'} · Joined {new Date(selected.joined_at).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}
+                📍 {selected.city || 'Warangal'} · Joined {new Date(selected.joined_at).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}
               </p>
 
               {/* Stats row */}

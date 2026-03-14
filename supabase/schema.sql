@@ -1,5 +1,5 @@
 -- ============================================================
--- BOOKIES INDIA — SUPABASE SCHEMA
+-- WARANGAL BOOKIES — SUPABASE SCHEMA
 -- Run this in: Supabase Dashboard → SQL Editor → New Query
 -- ============================================================
 
@@ -11,7 +11,7 @@ create table public.profiles (
   role        text not null default 'member' check (role in ('member', 'admin')),
   points      integer not null default 0,
   books_read  integer not null default 0,
-  city        text default 'India',
+  city        text default 'Warangal',
   bio         text,
   joined_at   timestamptz not null default now()
 );
@@ -192,13 +192,12 @@ returns trigger
 language plpgsql security definer set search_path = public
 as $$
 begin
-  insert into public.profiles (id, name, email, role, city)
+  insert into public.profiles (id, name, email, role)
   values (
     new.id,
     coalesce(new.raw_user_meta_data->>'name', split_part(new.email, '@', 1)),
     new.email,
-    coalesce(new.raw_user_meta_data->>'role', 'member'),
-    coalesce(new.raw_user_meta_data->>'city', 'India')
+    coalesce(new.raw_user_meta_data->>'role', 'member')
   );
   return new;
 end;
