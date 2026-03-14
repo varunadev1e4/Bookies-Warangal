@@ -257,7 +257,7 @@ export default function HomePage() {
           Welcome back, {firstName}! {profile?.role === 'admin' ? '⚡' : '👋'}
         </h2>
         <p style={{ fontSize: 13, opacity: 0.75, lineHeight: 1.5 }}>
-          Keep reading, keep growing. India's fastest-growing reading community.
+          Keep reading, keep growing. Warangal's biggest reading community.
         </p>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10, marginTop: 18 }}>
           <StatCard num={stats.members} label="Members" />

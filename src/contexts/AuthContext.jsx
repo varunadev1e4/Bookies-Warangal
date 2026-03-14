@@ -32,7 +32,7 @@ export function AuthProvider({ children }) {
     return () => subscription.unsubscribe()
   }, [])
 
-  async function signUp({ name, email, password, adminCode, community }) {
+  async function signUp({ name, email, password, adminCode }) {
     let role = 'member'
     if (adminCode && adminCode.trim()) {
       const { data: valid, error: rpcErr } = await supabase
@@ -45,7 +45,7 @@ export function AuthProvider({ children }) {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { name, role, city: community } }
+      options: { data: { name, role } }
     })
     if (error) throw error
 

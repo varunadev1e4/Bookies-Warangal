@@ -310,7 +310,7 @@ export default function MeetupsPage() {
                   const d = new Date(selected.date)
                   const dateStr = d.toLocaleDateString('en-IN', { weekday:'long', day:'numeric', month:'long', year:'numeric' })
                   const msg = [
-                    `📚 *Bookies India Meetup*`,
+                    `📚 *Warangal Bookies Meetup*`,
                     ``,
                     `📖 *${selected.title}*`,
                     `📅 ${dateStr}`,
@@ -319,7 +319,7 @@ export default function MeetupsPage() {
                     selected.book_discussed ? `📗 Book: ${selected.book_discussed}` : '',
                     selected.description ? `\n${selected.description}` : '',
                     ``,
-                    `Join us! RSVP on the Bookies India app 🙌`,
+                    `Join us! RSVP on the Warangal Bookies app 🙌`,
                   ].filter(l => l !== undefined && !(l === '' && l !== '')).join('\n')
                   window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank')
                 }}
