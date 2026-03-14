@@ -38,7 +38,7 @@ function AppRoutes() {
   if (loading) return (
     <div className="loading-screen">
       <div style={{ fontFamily: 'var(--font-serif)', fontSize: 38, marginBottom: 6, color: 'var(--amber)' }}>📚</div>
-      <div style={{ fontFamily: 'var(--font-serif)', fontSize: 22, fontWeight: 700, marginBottom: 16 }}>Warangal Bookies</div>
+      <div style={{ fontFamily: 'var(--font-serif)', fontSize: 22, fontWeight: 700, marginBottom: 16 }}>Bookies India</div>
       <div className="spinner" />
     </div>
   )

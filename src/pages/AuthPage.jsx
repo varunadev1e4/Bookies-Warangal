@@ -22,6 +22,7 @@ export default function AuthPage() {
   const [suPass, setSuPass]       = useState('')
   const [suPass2, setSuPass2]     = useState('')
   const [suAdminCode, setSuAdminCode] = useState('')
+  const [suCommunity, setSuCommunity] = useState('')
   const [showAdminField, setShowAdminField] = useState(false)
 
   async function handleSignIn(e) {
@@ -44,8 +45,14 @@ export default function AuthPage() {
     if (suPass.length < 6)  { showError('Password must be at least 6 characters'); return }
     setLoading(true)
     try {
-      const { role } = await signUp({ name: suName, email: suEmail, password: suPass, adminCode: suAdminCode })
-      success(role === 'admin' ? '⚡ Admin account created! Welcome!' : '🎉 Welcome to Warangal Bookies!')
+      const { role } = await signUp({
+        name: suName,
+        email: suEmail,
+        password: suPass,
+        adminCode: suAdminCode,
+        community: suCommunity,
+      })
+      success(role === 'admin' ? '⚡ Admin account created! Welcome!' : `🎉 Welcome to ${suCommunity || 'Bookies India'}!`)
       navigate('/')
     } catch (err) {
       showError(err.message || 'Sign up failed')
@@ -94,10 +101,10 @@ export default function AuthPage() {
               fontSize: 30, marginBottom: 12,
             }}>📚</div>
             <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: 24, fontWeight: 900 }}>
-              Warangal Bookies
+              Bookies India
             </h1>
             <p style={{ color: 'var(--muted)', fontSize: 13, marginTop: 4 }}>
-              📍 Warangal, Telangana · 750+ Readers
+              🇮🇳 Reading communities across India
             </p>
           </div>
 
@@ -144,6 +151,12 @@ export default function AuthPage() {
                 <input className="input" type="email" required placeholder="your@email.com"
                   value={suEmail} onChange={e => setSuEmail(e.target.value)} />
               </div>
+              <div className="form-group">
+                <label className="form-label">City / Community</label>
+                <input className="input" required placeholder="e.g. Bangalore Bookies"
+                  value={suCommunity} onChange={e => setSuCommunity(e.target.value)} />
+              </div>
+
               <div className="form-row">
                 <div className="form-group">
                   <label className="form-label">Password</label>
@@ -200,7 +213,7 @@ export default function AuthPage() {
         </div>
 
         <p style={{ textAlign: 'center', fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 16 }}>
-          Warangal Bookies · Community Book Club
+          Bookies India · Community Reading Network
         </p>
       </div>
     </div>
